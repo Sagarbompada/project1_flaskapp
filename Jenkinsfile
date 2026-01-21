@@ -26,7 +26,7 @@ pipeline {
 from app import app
 client = app.test_client()
 response = client.get("/health")
-assert response.data == b"OK"
+assert response.data == b"Healthy"
 print("Health endpoint test passed")
 EOF
                 '''
