@@ -9,16 +9,7 @@ pipeline {
             }
         }
 
-        stage('Setup Virtual Environment & Install Deps') {
-            steps {
-                sh '''
-                  python3 -m venv venv
-                 ./venv/bin/python -m pip install -r requirements.txt
-                '''
-            }
-        }
-
-        stage('Run Health Test') {
+         stage('Run Health Test') {
             steps {
                 sh '''
                   ./venv/bin/python - <<EOF
