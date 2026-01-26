@@ -23,6 +23,39 @@ EOF
             }
         }
 
+        stage('Docker Build') {
+            steps {
+                sh '''
+                  docker build -t flask-app:${BUILD_NUMBER} .
+                '''
+            }
+        }
+
+        stage('Run Container') {
+            steps {
+                sh '''
+                  docker run -d --name flask-ci -p 5000:5000 flask-app:${BUILD_NUMBER}
+                  sleep 5
+                '''
+            }
+        }
+
+        stage('Container Health Check') {
+            steps {
+                sh '''
+                  curl -f http://localhost:5000/health
+                '''
+            }
+        }
+
+        stage('Cleanup') {
+            steps {
+                sh '''
+                  docker rm -f flask-ci || true
+                '''
+            }
+        }
+
     }
 
     post {
