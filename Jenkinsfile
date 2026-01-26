@@ -60,10 +60,13 @@ EOF
 
     post {
         success {
-            echo "CI Pipeline completed successfully!"
+            echo "✅ Jenkins CI + Docker pipeline completed successfully!"
         }
         failure {
-            echo "CI Pipeline failed!"
+            echo "❌ Jenkins CI + Docker pipeline failed!"
+        }
+        always {
+            sh 'docker rm -f flask-ci || true'
         }
     }
 }
