@@ -4,7 +4,7 @@ pipeline {
     environment {
         AWS_REGION    = "us-east-1" 
         AWS_ACCOUNT_ID = "390844761974"
-        ECR_REPO      = "project1-flask"
+        ECR_REPO      = "project1-flaskapp"
         IMAGE_NAME    = "flask-app"
     }
 
