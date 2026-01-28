@@ -18,19 +18,16 @@ pipeline {
 
     stage('Setup Virtual Environment & Install Deps') {
       steps {
-        sh ''
-        '
+        sh '''
         rm - rf venv
         python3 - m venv venv
           . / venv / bin / python - m pip install--upgrade pip
-          . / venv / bin / python - m pip install - r requirements.txt ''
-        '
+          . / venv / bin / python - m pip install - r requirements.txt '''
       }
 
       stage('Run Health Test') {
         steps {
-          sh ''
-          '
+          sh '''
           . / venv / bin / python - << EOF
           from app
           import app
@@ -41,38 +38,32 @@ pipeline {
           assert response.data.strip() == b "Healthy"
           print("Health endpoint test passed")
           EOF
-            ''
-          '
+            '''
         }
       }
 
       stage('Docker Build') {
         steps {
-          sh ''
-          '
+          sh '''
           docker build - t $IMAGE_NAME: $ {
             BUILD_NUMBER
           }.
-          ''
-          '
+          '''
         }
       }
 
       stage('Login to AWS ECR') {
         steps {
-          sh ''
-          '
+          sh '''
           aws ecr get - login - password--region us - east - 1\ |
             docker login--username AWS--password - stdin\
-          390844761974. dkr.ecr.us - east - 1. amazonaws.com ''
-          '
+          390844761974. dkr.ecr.us - east - 1. amazonaws.com '''
         }
       }
 
       stage('Tag Docker Image') {
         steps {
-          sh ''
-          '
+          sh '''
           docker tag $IMAGE_NAME: $ {
             BUILD_NUMBER
           }\
@@ -83,20 +74,17 @@ pipeline {
           docker tag $IMAGE_NAME: $ {
             BUILD_NUMBER
           }\
-          390844761974. dkr.ecr.us - east - 1. amazonaws.com / $ECR_REPO: latest ''
-          '
+          390844761974. dkr.ecr.us - east - 1. amazonaws.com / $ECR_REPO: latest '''
         }
       }
 
       stage('Push Image to ECR') {
         steps {
-          sh ''
-          '
+          sh '''
           docker push 390844761974. dkr.ecr.us - east - 1. amazonaws.com / $ECR_REPO: $ {
             BUILD_NUMBER
           }
-          docker push 390844761974. dkr.ecr.us - east - 1. amazonaws.com / $ECR_REPO: latest ''
-          '
+          docker push 390844761974. dkr.ecr.us - east - 1. amazonaws.com / $ECR_REPO: latest '''
         }
       }
     }
