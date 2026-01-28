@@ -1,6 +1,13 @@
 pipeline {
     agent any
 
+    environment {
+        AWS_REGION    = "us-east-1" 
+        AWS_ACCOUNT_ID = "390844761974"
+        ECR_REPO      = "project1-flask"
+        IMAGE_NAME    = "flask-app"
+    }
+
     stages {
 
         stage('Checkout Code') {
@@ -9,14 +16,26 @@ pipeline {
             }
         }
 
-         stage('Run Health Test') {
+        stage('Setup Virtual Environment & Install Deps') {
+            steps {
+                sh '''
+                  rm -rf venv
+                  python3 -m venv venv
+                  ./venv/bin/python -m pip install --upgrade pip
+                  ./venv/bin/python -m pip install -r requirements.txt
+                   '''
+    }
+
+        stage('Run Health Test') {
             steps {
                 sh '''
                   ./venv/bin/python - <<EOF
 from app import app
+
 client = app.test_client()
 response = client.get("/health")
-assert response.data == b"Healthy"
+
+assert response.data.strip() == b"Healthy"
 print("Health endpoint test passed")
 EOF
                 '''
@@ -26,44 +45,49 @@ EOF
         stage('Docker Build') {
             steps {
                 sh '''
-                  docker build -t flask-app:${BUILD_NUMBER} .
+                  docker build -t $IMAGE_NAME:${BUILD_NUMBER} .
                 '''
             }
         }
 
-        stage('Run Container') {
+        stage('Login to AWS ECR') {
             steps {
                 sh '''
-                  docker run -d --name flask-ci -p 5000:5000 flask-app:${BUILD_NUMBER}
-                  sleep 5
+                  aws ecr get-login-password --region us-east-1 \
+                  | docker login --username AWS --password-stdin \
+                  390844761974.dkr.ecr.us-east-1.amazonaws.com
                 '''
             }
         }
 
-        stage('Container Health Check') {
+        stage('Tag Docker Image') {
             steps {
                 sh '''
-                  curl -f http://localhost:5000/health
+                  docker tag $IMAGE_NAME:${BUILD_NUMBER} \
+                  390844761974.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPO:${BUILD_NUMBER}
+
+                  docker tag $IMAGE_NAME:${BUILD_NUMBER} \
+                  390844761974.dkr.ecr.us-east-1.amazonaws.com/$ECR_REPO:latest
                 '''
             }
         }
 
-        stage('Cleanup') {
+        stage('Push Image to ECR') {
             steps {
                 sh '''
-                  docker rm -f flask-ci || true
+                  docker push 390844761974.dkr.ecr.us-east-1.amazonaws.com/$ECR_REPO:${BUILD_NUMBER}
+                  docker push 390844761974.dkr.ecr.us-east-1.amazonaws.com/$ECR_REPO:latest
                 '''
             }
         }
-
     }
 
     post {
         success {
-            echo "✅ Jenkins CI + Docker pipeline completed successfully!"
+            echo "✅ CI + Docker + AWS ECR pipeline completed successfully!"
         }
         failure {
-            echo "❌ Jenkins CI + Docker pipeline failed!"
+            echo "❌ Pipeline failed!"
         }
         always {
             sh 'docker rm -f flask-ci || true'
