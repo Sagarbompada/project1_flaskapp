@@ -1,4 +1,4 @@
-#!/root/project1-app/venv/bin/python3
+#!/home/ubuntu/python_project/project1_flaskapp/venv/bin/python
 # -*- coding: utf-8 -*-
 import re
 import sys
