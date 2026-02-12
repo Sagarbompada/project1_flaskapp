@@ -81,7 +81,22 @@ EOF
                 '''
             }
         }
+
+        stage('Deploy to Kubernetes') {
+            steps {
+                sh '''
+                  kubectl apply -f k8s/deployment.yaml
+                  kubectl apply -f k8s/service.yaml
+
+                  kubectl set image deployment/flask-app \
+                  flask=$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPO:${BUILD_NUMBER}
+
+                  kubectl rollout status deployment/flask-app
+                '''
+            }
+        }
     }
+ 
 
     post {
         success {
