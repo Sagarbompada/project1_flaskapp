@@ -1,11 +1,9 @@
 pipeline {
-    agent any
+    agent { label 'docker-agent' }
 
     environment {
-        AWS_REGION    = "us-east-1" 
-        AWS_ACCOUNT_ID = "390844761974"
-        ECR_REPO      = "project1-flaskapp"
-        IMAGE_NAME    = "flask-app"
+        DOCKERHUB_USER = "sagarbompada"
+        IMAGE_NAME     = "flask-app"
     }
 
     stages {
@@ -46,67 +44,52 @@ EOF
         stage('Docker Build') {
             steps {
                 sh '''
-                  docker build -t $IMAGE_NAME:${BUILD_NUMBER} .
+                  docker build -t $DOCKERHUB_USER/$IMAGE_NAME:${BUILD_NUMBER} .
+                  docker tag $DOCKERHUB_USER/$IMAGE_NAME:${BUILD_NUMBER} \
+                             $DOCKERHUB_USER/$IMAGE_NAME:latest
                 '''
             }
         }
 
-        stage('Login to AWS ECR') {
+        stage('Docker Hub Login') {
+            steps {
+                withCredentials([usernamePassword(
+                    credentialsId: 'dockerhub-creds',
+                    usernameVariable: 'DOCKER_USER',
+                    passwordVariable: 'DOCKER_PASS'
+                )]) {
+                    sh '''
+                      echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
+                    '''
+                }
+            }
+        }
+
+        stage('Push Image to Docker Hub') {
             steps {
                 sh '''
-                  aws ecr get-login-password --region $AWS_REGION \
-                  | docker login --username AWS --password-stdin \
-                  $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com
+                  docker push $DOCKERHUB_USER/$IMAGE_NAME:${BUILD_NUMBER}
+                  docker push $DOCKERHUB_USER/$IMAGE_NAME:latest
                 '''
             }
         }
 
-        stage('Tag Docker Image') {
+        stage('Cleanup Local Images') {
             steps {
                 sh '''
-                  docker tag $IMAGE_NAME:${BUILD_NUMBER} \
-                  $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPO:${BUILD_NUMBER}
-
-                  docker tag $IMAGE_NAME:${BUILD_NUMBER} \
-                  $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPO:latest
-                '''
-            }
-        }
-
-        stage('Push Image to ECR') {
-            steps {
-                sh '''
-                  docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPO:${BUILD_NUMBER}
-                  docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPO:latest
-                '''
-            }
-        }
-
-        stage('Deploy to Kubernetes') {
-            steps {
-                sh '''
-                  kubectl apply -f k8s/deployment.yaml
-                  kubectl apply -f k8s/service.yaml
-
-                  kubectl set image deployment/flask-app \
-                  flask=$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPO:${BUILD_NUMBER}
-
-                  kubectl rollout status deployment/flask-app
+                  docker rmi $DOCKERHUB_USER/$IMAGE_NAME:${BUILD_NUMBER} || true
+                  docker rmi $DOCKERHUB_USER/$IMAGE_NAME:latest || true
                 '''
             }
         }
     }
- 
 
     post {
         success {
-            echo "✅ CI + Docker + AWS ECR pipeline completed successfully!"
+            echo "✅ CI + Docker Hub pipeline completed successfully!"
         }
         failure {
             echo "❌ Pipeline failed!"
-        }
-        always {
-            sh 'docker rm -f flask-ci || true'
         }
     }
 }
