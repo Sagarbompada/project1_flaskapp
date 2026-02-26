@@ -73,6 +73,20 @@ EOF
                 '''
             }
         }
+        
+        stage('Deploy to Minikube') {
+             steps {
+                sh '''
+                  kubectl apply -f k8s/deployment.yaml
+                  kubectl apply -f k8s/service.yaml
+
+                  kubectl set image deployment/flask-app \
+                  flask=$DOCKERHUB_USER/$IMAGE_NAME:${BUILD_NUMBER}
+
+                  kubectl rollout status deployment/flask-app
+                '''
+    }
+}
 
         stage('Cleanup Local Images') {
             steps {
