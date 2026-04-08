@@ -4,7 +4,7 @@ pipeline {
     environment {
         DOCKERHUB_USER = "sagarbompada"
         IMAGE_NAME     = "flask-app"
-        IMAGE_TAG      = "$(BUILD_NUMBER)"
+         IMAGE_TAG = "${BUILD_NUMBER}"
         KUBECONFIG = "/var/lib/jenkins/.kube/config"
     }
 
