@@ -79,8 +79,8 @@ EOF
         stage('Tag & Push Image to Docker Hub') {
             steps {
                 sh '''
-                  docker tag flask-app:$IMAGE_TAG $DOCKERHUB_USER/$IMAGE_NAME:$IMAGE_TAG
-                  docker tag flask-app:$IMAGE_TAG $DOCKERHUB_USER/$IMAGE_NAME:latest
+                  docker tag $IMAGE_NAME:$IMAGE_TAG $DOCKERHUB_USER/$IMAGE_NAME:$IMAGE_TAG
+                  docker tag $IMAGE_NAME:$IMAGE_TAG $DOCKERHUB_USER/$IMAGE_NAME:latest
         
                   docker push $DOCKERHUB_USER/$IMAGE_NAME:$IMAGE_TAG
                   docker push $DOCKERHUB_USER/$IMAGE_NAME:latest
