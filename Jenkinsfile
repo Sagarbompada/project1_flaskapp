@@ -87,6 +87,7 @@ EOF
                 '''
                  }
             }
+
         
         stage('Deploy to Minikube') {
              steps {
