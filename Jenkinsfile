@@ -4,6 +4,7 @@ pipeline {
     environment {
         DOCKERHUB_USER = "sagarbompada"
         IMAGE_NAME     = "flask-app"
+        IMAGE_TAG      = "$(BUILD_NUMBER)"
         KUBECONFIG = "/var/lib/jenkins/.kube/config"
     }
 
@@ -45,8 +46,8 @@ EOF
         stage('Docker Build') {
             steps {
                 sh '''
-                  docker build -t $DOCKERHUB_USER/$IMAGE_NAME:${BUILD_NUMBER} .
-                  docker tag $DOCKERHUB_USER/$IMAGE_NAME:${BUILD_NUMBER} \
+                  docker build -t $DOCKERHUB_USER/$IMAGE_NAME:$IMAGE_TAG .
+                  docker tag $DOCKERHUB_USER/$IMAGE_NAME:$IMAGE_TAG \
                              $DOCKERHUB_USER/$IMAGE_NAME:latest
                 '''
             }
@@ -65,15 +66,27 @@ EOF
                 }
             }
         }
+        
+        // stage('Push Image to Docker Hub') {
+        //     steps {
+        //         sh '''
+        //           docker push $DOCKERHUB_USER/$IMAGE_NAME:${BUILD_NUMBER}
+        //           docker push $DOCKERHUB_USER/$IMAGE_NAME:latest
+        //         '''
+        //     }
+        // }
 
-        stage('Push Image to Docker Hub') {
+        stage('Tag & Push Image to Docker Hub') {
             steps {
                 sh '''
-                  docker push $DOCKERHUB_USER/$IMAGE_NAME:${BUILD_NUMBER}
+                  docker tag flask-app:$IMAGE_TAG $DOCKERHUB_USER/$IMAGE_NAME:$IMAGE_TAG
+                  docker tag flask-app:$IMAGE_TAG $DOCKERHUB_USER/$IMAGE_NAME:latest
+        
+                  docker push $DOCKERHUB_USER/$IMAGE_NAME:$IMAGE_TAG
                   docker push $DOCKERHUB_USER/$IMAGE_NAME:latest
                 '''
+                 }
             }
-        }
         
         stage('Deploy to Minikube') {
              steps {
@@ -82,17 +95,27 @@ EOF
                   kubectl apply -f k8s/service.yaml
 
                   kubectl set image deployment/flask-app \
-                  flask=$DOCKERHUB_USER/$IMAGE_NAME:${BUILD_NUMBER}
+                  flask=$DOCKERHUB_USER/$IMAGE_NAME:$IMAGE_TAG
 
                   kubectl rollout status deployment/flask-app
                 '''
     }
 }
 
+
+       stage('Post Deploy Health Check') {
+            steps {
+                sh '''
+                sleep 10
+                curl -f https://forminikube.awspractice.online/health
+                '''
+            }
+        }
+
         stage('Cleanup Local Images') {
             steps {
                 sh '''
-                  docker rmi $DOCKERHUB_USER/$IMAGE_NAME:${BUILD_NUMBER} || true
+                  docker rmi $DOCKERHUB_USER/$IMAGE_NAME:$IMAGE_TAG || true
                   docker rmi $DOCKERHUB_USER/$IMAGE_NAME:latest || true
                 '''
             }
