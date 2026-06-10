@@ -1,21 +1,21 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: flask-app
+  name: {{ .Values.app.name }}
 spec:
-  replicas: 1
+  replicas: {{ .Values.replicaCount }}
   selector:
     matchLabels:
-      app: flask
+      app: {{ .Values.app.label }}
   template:
     metadata:
       labels:
-        app: flask
+        app: {{ .Values.app.label }}
     spec:
       imagePullSecrets:
-      - name: ecr-secret
+      - name: {{ .Values.imagePullSecret }}
       containers:
       - name: flask
-        image: sagarbompada/flask-app:latest
+        image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
         ports:
-        - containerPort: 5000
+        - containerPort: {{ .Values.service.targetPort }}
