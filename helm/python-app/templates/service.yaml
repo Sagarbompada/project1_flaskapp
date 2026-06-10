@@ -1,12 +1,12 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: flask-service
+  name: {{ .Values.app.name }}-service
 spec:
-  type: NodePort
+  type: {{ .Values.service.type }}
   selector:
-    app: flask
+    app: {{ .Values.app.label }}
   ports:
-    - port: 80
-      targetPort: 5000
-      nodePort: 30007
+    - port: {{ .Values.service.port }}
+      targetPort: {{ .Values.service.targetPort }}
+      nodePort: {{ .Values.service.nodePort }}
